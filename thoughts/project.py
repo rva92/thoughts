@@ -18,7 +18,8 @@ class Project:
 
         # Load all notes under the collection, if any
         sub_folders = os.listdir(self.project_path)
-        for note_id in sub_folders:
+        for note_file_name in sub_folders:
+            note_id = note_file_name.replace(".txt", "")
             self.notes.update({note_id: Note(
                 parent_folder=self.project_path,
                 note_id=note_id
@@ -51,7 +52,7 @@ class Project:
             # custom note name
             number_of_notes = len(self.notes.keys())
             notes_number = [
-                int(x.lower().split("Note ")[1].replace(".txt", ""))
+                int(x.lower().split("note ")[1].replace(".txt", ""))
                 for x in self.notes.keys() if "Note " in x
             ]
             largest_note_number = max(notes_number) if notes_number else 0
