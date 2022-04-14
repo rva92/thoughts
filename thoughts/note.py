@@ -1,3 +1,4 @@
+import atexit
 import os
 
 
@@ -17,11 +18,8 @@ class Note:
         else:
             self.text = ""
 
-    def __del__(self):
-        """
-        Ensure to close the note file when the note is deleted
-        """
-        self.save_file()
+        # Define exit clause
+        atexit.register(self.save_file)
 
     def delete(self):
         os.remove(self.note_path)
@@ -31,3 +29,6 @@ class Note:
         file.write(self.text)
         file.close()
 
+    def update_text(self, text: str):
+        self.text = text
+        self.save_file()

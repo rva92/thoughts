@@ -2,12 +2,9 @@ import tkinter as tk
 from tkinter import ttk
 import os
 
-
 from thoughts import Collection, Project, Note
 
 # TODOS:
-# TODO: Ensure notes are saved when switching and when closing the application
-# TODO: Add autosave?
 # TODO: Make a "create new collection button"
 # TODO: Make a "create a new note button"
 # TODO: Make a "create a new project button"
@@ -78,9 +75,19 @@ class ThoughtsApp:
                 )
                 project_button.pack(fill='both')
 
+        # Add a "create new collection notebook fan"
+        #self.notebook.add(, text="+")
+
         self.root.title("Thoughts")
         self.root.geometry('1600x900')
+        self.root.protocol("WM_DELETE_WINDOW", self.clean_up)
         self.root.mainloop()
+
+    def clean_up(self):
+        if self.note_edditor is not None:
+            self.active_note.update_text(self.note_edditor.get(1.0, tk.END))
+
+        self.root.destroy()
 
     @property
     def active_collection(self):
@@ -116,13 +123,15 @@ class ThoughtsApp:
     def note_button_click(self, note_name):
         # Clear the old editor
         if self.note_edditor is not None:
+            self.active_note.update_text(self.note_edditor.get(1.0, tk.END))
             self.note_edditor.destroy()
 
         # Get the note text and make a new editor
         self.note_edditor = tk.Text(
             self.action_frames[self.active_collection.name]
         )
-        self.note_edditor.insert(tk.INSERT, self.active_project.notes[note_name].text)
+        self.active_note = self.active_project.notes[note_name]
+        self.note_edditor.insert(tk.INSERT, self.active_note.text)
         self.note_edditor.pack()
 
 # Organizing in row/columns: for notes
