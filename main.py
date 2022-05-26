@@ -5,9 +5,8 @@ import os
 from thoughts import Collection, Project, Note
 
 # TODOS:
-# TODO: Fix error when adding note
+# TODO: Fix new project/note entry connection in entry field?
 # TODO: Make note editor work when switching notes / creating notes
-# TODO: Apply this https://stackoverflow.com/questions/71859022/tkinter-notebook-create-new-tabs-by-clicking-on-a-plus-tab-like-every-web-brow/71861284#71861284
 # TODO: Make delete options for notes, projects and collections
 # TODO: Improve button design
 # TODO: Improve layout
@@ -29,6 +28,9 @@ class ThoughtsApp:
         self.note_edditor = None
         self.new_collection_entry = None
         self.create_new_note_button = None
+        self.new_collection_pop_up = None
+        self.collection_name_entry = None
+        self.create_new_project_button = None
 
         # Draw the main frame and
         self.root = tk.Tk()
@@ -41,37 +43,35 @@ class ThoughtsApp:
         # collection
         self.notebook = ttk.Notebook(self.root)
         self.notebook.grid(row=0, column=0, sticky='nsew')
+        self.notebook.bind("<<NotebookTabChanged>>", self.handle_last_tab_selection)
 
         # Append all collections based on folders in the path
         # Notice, this is NOT robust to outside temporing with the files
         collection_folders = os.listdir(app_folder)
         for collection_name in collection_folders:
-            self.add_collection_page(collection_name=collection_name)
-
+            self.add_collection_page(collection_name=collection_name, first_insert=True)
         # Add a an extra frame which purpose is to add new frames
-        self.add_new_collection_fan_button()
+        self.notebook.add(tk.Frame(), text="+")
 
         self.root.title("Thoughts")
         self.root.geometry('1600x900')
         self.root.protocol("WM_DELETE_WINDOW", self.clean_up)
         self.root.mainloop()
 
-    def add_new_collection_fan_button(self):
-        self.new_collection_entry = tk.Entry(self.notebook, text="CollectionName")
-        self.new_collection_entry.bind(sequence='<Return>', func=self.add_new_collection_from_entry)
-        self.notebook.add(self.new_collection_entry, text="+")
-
     def add_new_collection_from_entry(self, *args):
         collection_name = self.new_collection_entry.get()
         if collection_name not in self.collections.keys():
             self.new_collection_entry.destroy()
             self.add_collection_page(collection_name=collection_name)
-            self.add_new_collection_fan_button()
         else:
             tab_id = list(self.collections.keys()).index(collection_name)
             self.notebook.select(tab_id)
 
-    def add_collection_page(self, collection_name):
+    def add_collection_page(self, collection_name, first_insert=False):
+        if first_insert:
+            index = len(self.notebook.tabs())
+        else:
+            index = len(self.notebook.tabs()) - 1
         collection_frame = ttk.Frame(self.notebook)
         collection_frame.grid_rowconfigure(0, weight=1)
         collection_frame.grid_columnconfigure(2, weight=1)
@@ -89,8 +89,10 @@ class ThoughtsApp:
                                 anchor=tk.CENTER)
         action_frame.grid(row=0, column=2, columnspan=3, rowspan=2,
                           sticky="nsew")
-
-        self.notebook.add(collection_frame, text=collection_name)
+        if first_insert:
+            self.notebook.add(collection_frame, text=collection_name)
+        else:
+            self.notebook.insert(index, collection_frame, text=collection_name)
 
         self.collections.update({collection_name: Collection(
             folder=app_folder, name=collection_name)})
@@ -118,13 +120,13 @@ class ThoughtsApp:
         self.add_create_new_project_button(collection_name=collection_name, projects_frame=projects_frame)
 
     def add_create_new_project_button(self, collection_name, projects_frame):
-        create_new_project_button = tk.Entry(
+        self.create_new_project_button = tk.Entry(
             master=projects_frame,
             text="New Project Name",
         )
-        create_new_project_button.bind(sequence='<Return>', func=self.add_new_project)
-        create_new_project_button.pack(fill='both')
-        self.project_entries.update({collection_name: create_new_project_button})
+        self.create_new_project_button.bind(sequence='<Return>', func=self.add_new_project)
+        self.create_new_project_button.pack(fill='both')
+        self.project_entries.update({collection_name: self.create_new_project_button})
 
     def add_new_project(self, *args):
         project_name_entry = self.project_entries[self.active_collection.name]
@@ -200,7 +202,7 @@ class ThoughtsApp:
         self.create_new_note_button.bind(sequence='<Return>', func=lambda x=notes_frames: self.add_new_note_from_entry(notes_frame=x))
         self.create_new_note_button.pack(fill='both')
 
-    def add_new_note_from_entry(self, notes_frame):
+    def add_new_note_from_entry(self, notes_frame, *args):
         new_note_name = self.create_new_note_button.get()
         self.add_new_note(note_name=new_note_name, notes_frames=notes_frame)
         self.create_new_note_button.destroy()
@@ -235,16 +237,46 @@ class ThoughtsApp:
         self.note_edditor.insert(tk.INSERT, self.active_note.text)
         self.note_edditor.pack()
 
-# Organizing in row/columns: for notes
-# https://stackoverflow.com/questions/21738149/make-tkinter-buttons-for-every-item-in-a-list
+    def handle_last_tab_selection(self, *args):
+        if self.notebook.select() == self.notebook.tabs()[-1]:
+            self.popupwin()
+
+    def insert_new_collection_fan(self):
+        new_collection_name = self.collection_name_entry.get()
+        index = len(self.notebook.tabs()) - 1
+        self.add_collection_page(collection_name=new_collection_name)
+        self.notebook.select(index)
+        self.close_pop_up_window()
+
+    def close_pop_up_window(self):
+        self.new_collection_pop_up.destroy()
+
+    def popupwin(self):
+        # Create a Toplevel window
+        self.new_collection_pop_up = tk.Toplevel(self.root)
+        self.new_collection_pop_up.geometry("750x250")
+
+        # Create an Entry Widget in the Toplevel window
+        self.collection_name_entry = tk.Entry(self.new_collection_pop_up,
+                                              width=25)
+
+        self.collection_name_entry.pack()
+
+        # Create a Button to print something in the Entry widget
+        tk.Button(
+            self.new_collection_pop_up,
+            text="Ok",
+            command=lambda: self.insert_new_collection_fan()
+        ).pack(pady=5, side=tk.TOP)
+
+        # Create a Button Widget in the Toplevel Window
+        button = tk.Button(
+            self.new_collection_pop_up,
+            text="Cancel",
+            command=lambda: self.close_pop_up_window()
+        )
+        button.pack(pady=5, side=tk.TOP)
+
 
 app_folder = "C:/test/thoughts/"
-
 app = ThoughtsApp(app_folder=app_folder)
-
-
-
-
-
-
-# TODO: Make a GUI

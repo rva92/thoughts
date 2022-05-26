@@ -4,7 +4,7 @@ from .project import Project
 
 
 class Collection:
-    def __init__(self, folder:str,  name: str):
+    def __init__(self, folder: str,  name: str):
         self.folder = folder
         self.name = name
         self.collection_path = folder + name + "/"
